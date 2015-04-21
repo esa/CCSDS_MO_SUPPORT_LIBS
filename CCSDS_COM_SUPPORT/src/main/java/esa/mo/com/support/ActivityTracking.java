@@ -1,14 +1,11 @@
 package esa.mo.com.support;
 
-import java.util.Map;
 import org.ccsds.moims.mo.com.COMHelper;
 import org.ccsds.moims.mo.com.activitytracking.ActivityTrackingHelper;
 import org.ccsds.moims.mo.com.activitytracking.structures.ActivityAcceptance;
 import org.ccsds.moims.mo.com.activitytracking.structures.ActivityAcceptanceList;
 import org.ccsds.moims.mo.com.activitytracking.structures.ActivityExecution;
 import org.ccsds.moims.mo.com.activitytracking.structures.ActivityExecutionList;
-import org.ccsds.moims.mo.com.event.provider.EventInheritanceSkeleton;
-import org.ccsds.moims.mo.com.event.provider.MonitorEventPublisher;
 import org.ccsds.moims.mo.com.structures.ObjectDetails;
 import org.ccsds.moims.mo.com.structures.ObjectDetailsList;
 import org.ccsds.moims.mo.com.structures.ObjectId;
@@ -17,13 +14,8 @@ import org.ccsds.moims.mo.com.structures.ObjectType;
 import org.ccsds.moims.mo.mal.MALException;
 import org.ccsds.moims.mo.mal.MALInteractionException;
 import org.ccsds.moims.mo.mal.provider.MALInteraction;
-import org.ccsds.moims.mo.mal.provider.MALPublishInteractionListener;
 import org.ccsds.moims.mo.mal.structures.EntityKey;
-import org.ccsds.moims.mo.mal.structures.EntityKeyList;
 import org.ccsds.moims.mo.mal.structures.Identifier;
-import org.ccsds.moims.mo.mal.structures.IdentifierList;
-import org.ccsds.moims.mo.mal.structures.QoSLevel;
-import org.ccsds.moims.mo.mal.structures.SessionType;
 import org.ccsds.moims.mo.mal.structures.Time;
 import org.ccsds.moims.mo.mal.structures.UInteger;
 import org.ccsds.moims.mo.mal.structures.URI;
@@ -31,61 +23,25 @@ import org.ccsds.moims.mo.mal.structures.UShort;
 import org.ccsds.moims.mo.mal.structures.UpdateHeader;
 import org.ccsds.moims.mo.mal.structures.UpdateHeaderList;
 import org.ccsds.moims.mo.mal.structures.UpdateType;
-import org.ccsds.moims.mo.mal.transport.MALErrorBody;
-import org.ccsds.moims.mo.mal.transport.MALMessageHeader;
 
 /**
  *
  */
-public class ActivityTracking extends EventInheritanceSkeleton
+public class ActivityTracking
 {
   public final static int OBJ_NO_ASE_ACCEPTANCE = 4;
   public final static int OBJ_NO_ASE_EXECUTION = 5;
   public final static int OBJ_NO_ASE_OPERATION_ACTIVITY = 6;
   public final static String OBJ_NO_ASE_ACCEPTANCE_STR = Integer.toString(OBJ_NO_ASE_ACCEPTANCE);
   public final static String OBJ_NO_ASE_EXECUTION_STR = Integer.toString(OBJ_NO_ASE_EXECUTION);
-  private final ObjectType OPERATION_ACTIVITY_OBJECT_TYPE = new ObjectType();
-  private MonitorEventPublisher monitorEventPublisher = null;
+  public static final ObjectType OPERATION_ACTIVITY_OBJECT_TYPE = new ObjectType(COMHelper.COM_AREA_NUMBER, ActivityTrackingHelper.ACTIVITYTRACKING_SERVICE_NUMBER, COMHelper.COM_AREA_VERSION, new UShort(OBJ_NO_ASE_OPERATION_ACTIVITY));
+
+  private final EventServiceHandler eventHandler;
   private int instanceIdentifier = 0;
 
-  public ActivityTracking()
+  public ActivityTracking(EventServiceHandler eventHandler)
   {
-    OPERATION_ACTIVITY_OBJECT_TYPE.setArea(COMHelper.COM_AREA_NUMBER);
-    OPERATION_ACTIVITY_OBJECT_TYPE.setService(ActivityTrackingHelper.ACTIVITYTRACKING_SERVICE_NUMBER);
-    OPERATION_ACTIVITY_OBJECT_TYPE.setVersion(COMHelper.COM_AREA_VERSION);
-    OPERATION_ACTIVITY_OBJECT_TYPE.setNumber(new UShort(OBJ_NO_ASE_OPERATION_ACTIVITY));
-  }
-
-  public void init(IdentifierList domain, Identifier network) throws MALInteractionException, MALException
-  {
-    System.out.println("ActivityTracking:init");
-
-    if (null == monitorEventPublisher)
-    {
-      System.out.println("ActivityTracking:creating event publisher");
-
-      if (null == domain)
-      {
-        domain = new IdentifierList();
-      }
-
-      if (null == network)
-      {
-        network = new Identifier("SPACE");
-      }
-
-      monitorEventPublisher = createMonitorEventPublisher(domain,
-              network,
-              SessionType.LIVE,
-              new Identifier("LIVE"),
-              QoSLevel.BESTEFFORT,
-              null,
-              new UInteger(0));
-      final EntityKeyList lst = new EntityKeyList();
-      lst.add(new EntityKey(new Identifier("*"), (long) 0, (long) 0, (long) 0));
-
-      monitorEventPublisher.register(lst, new ActivityTrackingPublisher());
-    }
+    this.eventHandler = eventHandler;
   }
 
   public void publishAcceptanceEventOperation(MALInteraction interaction, boolean success) throws MALInteractionException, MALException
@@ -140,16 +96,16 @@ public class ActivityTracking extends EventInheritanceSkeleton
     UpdateHeaderList uhl = new UpdateHeaderList();
     final EntityKey ekey = new EntityKey(
             new Identifier(OBJ_NO_ASE_ACCEPTANCE_STR),
-            generateSubKey(COMHelper._COM_AREA_NUMBER, ActivityTrackingHelper._ACTIVITYTRACKING_SERVICE_NUMBER, COMHelper._COM_AREA_VERSION, 0),
+            ComStructureHelper.generateSubKey(COMHelper._COM_AREA_NUMBER, ActivityTrackingHelper._ACTIVITYTRACKING_SERVICE_NUMBER, COMHelper._COM_AREA_VERSION, 0),
             new Long(instanceIdentifier++),
-            generateSubKey(source.getType()));
+            ComStructureHelper.generateSubKey(source.getType()));
     System.out.println("ActivityTracking:eKey = " + ekey);
     final Time timestamp = new Time(System.currentTimeMillis());
     UpdateHeader uh = new UpdateHeader(timestamp, interaction.getMessageHeader().getURITo(), UpdateType.DELETION, ekey);
     uhl.add(uh);
 
     // We can now publish the event
-    monitorEventPublisher.publish(uhl, odl, aal);
+    eventHandler.publish(uhl, odl, aal);
   }
 
   public void publishExecutionEventSubmitAck(MALInteraction interaction, boolean success) throws MALInteractionException, MALException
@@ -173,16 +129,16 @@ public class ActivityTracking extends EventInheritanceSkeleton
   }
 
   public void publishExecutionEventOperation(MALInteraction interaction, boolean success,
-          int currentStageCount, int totalStageCount) throws MALInteractionException, MALException
+                                             int currentStageCount, int totalStageCount) throws MALInteractionException, MALException
   {
     System.out.println("ActivityTracking:publishexecution malInter = " + interaction);
     // Produce header
     UpdateHeaderList uhl = new UpdateHeaderList();
     final EntityKey ekey = new EntityKey(
             new Identifier(OBJ_NO_ASE_EXECUTION_STR),
-            generateSubKey(COMHelper._COM_AREA_NUMBER, ActivityTrackingHelper._ACTIVITYTRACKING_SERVICE_NUMBER, COMHelper._COM_AREA_VERSION, 0),
+            ComStructureHelper.generateSubKey(COMHelper._COM_AREA_NUMBER, ActivityTrackingHelper._ACTIVITYTRACKING_SERVICE_NUMBER, COMHelper._COM_AREA_VERSION, 0),
             new Long(instanceIdentifier++),
-            generateSubKey(COMHelper._COM_AREA_NUMBER, ActivityTrackingHelper._ACTIVITYTRACKING_SERVICE_NUMBER, COMHelper._COM_AREA_VERSION, OBJ_NO_ASE_OPERATION_ACTIVITY));
+            ComStructureHelper.generateSubKey(COMHelper._COM_AREA_NUMBER, ActivityTrackingHelper._ACTIVITYTRACKING_SERVICE_NUMBER, COMHelper._COM_AREA_VERSION, OBJ_NO_ASE_OPERATION_ACTIVITY));
 
     System.out.println("ActivityTracking:publishexecution ekey = " + ekey);
     final Time timestamp = new Time(System.currentTimeMillis());
@@ -215,11 +171,11 @@ public class ActivityTracking extends EventInheritanceSkeleton
     odl.add(objDetails);
 
     // We can now publish the event
-    monitorEventPublisher.publish(uhl, odl, ael);
+    eventHandler.publish(uhl, odl, ael);
   }
 
   public void publishExecutionEvent(URI uriTo, boolean success,
-          int currentStageCount, int totalStageCount, ObjectId source) throws MALInteractionException, MALException
+                                    int currentStageCount, int totalStageCount, ObjectId source) throws MALInteractionException, MALException
   {
     System.out.println("ActivityTracking:publishexecution to (" + uriTo + "), source (" + source + ")");
 
@@ -227,9 +183,9 @@ public class ActivityTracking extends EventInheritanceSkeleton
     UpdateHeaderList uhl = new UpdateHeaderList();
     final EntityKey ekey = new EntityKey(
             new Identifier(OBJ_NO_ASE_EXECUTION_STR),
-            generateSubKey(COMHelper._COM_AREA_NUMBER, ActivityTrackingHelper._ACTIVITYTRACKING_SERVICE_NUMBER, COMHelper._COM_AREA_VERSION, 0),
+            ComStructureHelper.generateSubKey(COMHelper._COM_AREA_NUMBER, ActivityTrackingHelper._ACTIVITYTRACKING_SERVICE_NUMBER, COMHelper._COM_AREA_VERSION, 0),
             new Long(instanceIdentifier++),
-            generateSubKey(source.getType()));
+            ComStructureHelper.generateSubKey(source.getType()));
 
     System.out.println("ActivityTracking:publishexecution ekey = " + ekey);
     final Time timestamp = new Time(System.currentTimeMillis());
@@ -253,59 +209,6 @@ public class ActivityTracking extends EventInheritanceSkeleton
     odl.add(objDetails);
 
     // We can now publish the event
-    monitorEventPublisher.publish(uhl, odl, ael);
-  }
-
-  /**
-   * Generate a EntityKey sub key using fields as specified in COM STD 3.2.4.2b
-   *
-   * @param area
-   * @param service
-   * @param version
-   * @param objectNumber
-   * @return
-   */
-  static public Long generateSubKey(int area, int service, int version, int objectNumber)
-  {
-    long subkey = objectNumber;
-    subkey = subkey | (((long) version) << 24);
-    subkey = subkey | ((long) service << 32);
-    subkey = subkey | ((long) area << 48);
-
-    return subkey;
-  }
-
-  /**
-   * Generate a EntityKey sub key using fields as specified in COM STD 3.2.4.2b
-   *
-   * @param objectType
-   * @return
-   */
-  static public Long generateSubKey(ObjectType objectType)
-  {
-    return generateSubKey(objectType.getArea().getValue(),
-            objectType.getService().getValue(),
-            objectType.getVersion().getValue(),
-            objectType.getNumber().getValue());
-  }
-
-  public class ActivityTrackingPublisher implements MALPublishInteractionListener
-  {
-    public void publishRegisterAckReceived(MALMessageHeader header, Map qosProperties) throws MALException
-    {
-    }
-
-    public void publishRegisterErrorReceived(MALMessageHeader header, MALErrorBody body, Map qosProperties) throws MALException
-    {
-    }
-
-    public void publishErrorReceived(MALMessageHeader header, MALErrorBody body, Map qosProperties) throws MALException
-    {
-      System.out.println("ActivityTracking:publishErrorReceived - " + body.toString());
-    }
-
-    public void publishDeregisterAckReceived(MALMessageHeader header, Map qosProperties) throws MALException
-    {
-    }
+    eventHandler.publish(uhl, odl, ael);
   }
 }

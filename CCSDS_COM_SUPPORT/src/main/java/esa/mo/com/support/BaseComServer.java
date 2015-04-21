@@ -18,6 +18,7 @@ import org.ccsds.moims.mo.mal.structures.IdentifierList;
  */
 public abstract class BaseComServer extends BaseMalServer
 {
+  protected EventServiceHandler eventService;
   protected ActivityTracking activityService;
 
   public BaseComServer(IdentifierList domain, Identifier network)
@@ -39,9 +40,11 @@ public abstract class BaseComServer extends BaseMalServer
   @Override
   protected void subInit() throws MALException, MALInteractionException
   {
-    activityService = new ActivityTracking();
+    eventService = new EventServiceHandler();
+    activityService = new ActivityTracking(eventService);
 
-    createProvider(EventHelper.EVENT_SERVICE, activityService, true);
-    activityService.init(domain, network);
+    createProvider(EventHelper.EVENT_SERVICE, eventService, true);
+    
+    eventService.init(domain, network);
   }
 }
