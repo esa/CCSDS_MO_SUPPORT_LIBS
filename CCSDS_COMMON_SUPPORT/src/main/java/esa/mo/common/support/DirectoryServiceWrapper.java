@@ -1,5 +1,26 @@
+/* ----------------------------------------------------------------------------
+ * Copyright (C) 2014      European Space Agency
+ *                         European Space Operations Centre
+ *                         Darmstadt
+ *                         Germany
+ * ----------------------------------------------------------------------------
+ * System                : CCSDS MO Common Support library
+ * ----------------------------------------------------------------------------
+ * Licensed under the European Space Agency Public License, Version 2.0
+ * You may not use this file except in compliance with the License.
+ *
+ * Except as expressly set forth in this License, the Software is provided to
+ * You on an "as is" basis and without warranties of any kind, including without
+ * limitation merchantability, fitness for a particular purpose, absence of
+ * defects or errors, accuracy or non-infringement of intellectual property rights.
+ * 
+ * See the License for the specific language governing permissions and
+ * limitations under the License. 
+ * ----------------------------------------------------------------------------
+ */
 package esa.mo.common.support;
 
+import esa.mo.mal.support.BaseMalServer;
 import org.ccsds.moims.mo.common.directory.DirectoryHelper;
 import org.ccsds.moims.mo.common.directory.consumer.DirectoryStub;
 import org.ccsds.moims.mo.common.directory.structures.LocalNode;
@@ -39,7 +60,7 @@ public class DirectoryServiceWrapper
 
   public void init(MALConsumerManager consumerMgr, URI uri) throws MALInteractionException, MALException
   {
-    System.out.println("DirectoryServiceWrapper:init");
+    BaseMalServer.LOGGER.fine("DirectoryServiceWrapper:init");
 
     if (null == directoryService)
     {
@@ -67,48 +88,24 @@ public class DirectoryServiceWrapper
 
   public void publishProvider(Identifier providerName, IdentifierList domain, Identifier network, MALService service, IntegerList supportedCapabilities, URI serviceURI, URI brokerURI) throws MALException, MALInteractionException
   {
-    ServiceAddress sa = new ServiceAddress(new QoSLevelList(), new NamedValueList(), 1, serviceURI, brokerURI, null);
-    ServiceAddressList sal = new ServiceAddressList();
-    sal.add(sa);
-    
-    ProviderInformation pi = new ProviderInformation(providerName, supportedCapabilities, new NamedValueList(), sal);
-    ProviderInformationList pil = new ProviderInformationList();
-    pil.add(pi);
-    
-    ServiceDetails sd = new ServiceDetails(service.getArea().getNumber(), service.getNumber(), service.getArea().getVersion(), pil);
-    ServiceDetailsList sdl = new ServiceDetailsList();
-    sdl.add(sd);
-    
-    LocalNode node = new LocalNode(SessionType.LIVE, new Identifier("LIVE"), sdl);
-    NodeDetails nd = new NodeDetails(domain, network, node);
-    
-    NodeDetailsList ndl = new NodeDetailsList();
-    ndl.add(nd);
-    
-    directoryService.publishService(ndl);
+    directoryService.publishService(createNodeDetailsList(providerName,
+            domain,
+            network,
+            service,
+            supportedCapabilities,
+            serviceURI,
+            brokerURI));
   }
 
   public void withdrawProvider(Identifier providerName, IdentifierList domain, Identifier network, MALService service, IntegerList supportedCapabilities, URI serviceURI, URI brokerURI) throws MALException, MALInteractionException
   {
-    ServiceAddress sa = new ServiceAddress(new QoSLevelList(), new NamedValueList(), 1, serviceURI, brokerURI, null);
-    ServiceAddressList sal = new ServiceAddressList();
-    sal.add(sa);
-    
-    ProviderInformation pi = new ProviderInformation(providerName, supportedCapabilities, new NamedValueList(), sal);
-    ProviderInformationList pil = new ProviderInformationList();
-    pil.add(pi);
-    
-    ServiceDetails sd = new ServiceDetails(service.getArea().getNumber(), service.getNumber(), service.getArea().getVersion(), pil);
-    ServiceDetailsList sdl = new ServiceDetailsList();
-    sdl.add(sd);
-    
-    LocalNode node = new LocalNode(SessionType.LIVE, new Identifier("LIVE"), sdl);
-    NodeDetails nd = new NodeDetails(domain, network, node);
-    
-    NodeDetailsList ndl = new NodeDetailsList();
-    ndl.add(nd);
-    
-    directoryService.withdrawService(ndl);
+    directoryService.withdrawService(createNodeDetailsList(providerName,
+            domain,
+            network,
+            service,
+            supportedCapabilities,
+            serviceURI,
+            brokerURI));
   }
   
   public ServiceDetailsList lookupService(Identifier providerName, IdentifierList domain, Identifier network, MALService service, IntegerList supportedCapabilities) throws MALException, MALInteractionException
@@ -127,5 +124,28 @@ public class DirectoryServiceWrapper
     ServiceFilter filter = new ServiceFilter(domain, network, SessionType.LIVE, new Identifier("LIVE"), areaNumber, serviceNumber, areaVersion, supportedCapabilities, providerName);
     
     return directoryService.lookupService(filter);
+  }
+  
+  public static NodeDetailsList createNodeDetailsList(Identifier providerName, IdentifierList domain, Identifier network, MALService service, IntegerList supportedCapabilities, URI serviceURI, URI brokerURI)
+  {
+    ServiceAddress sa = new ServiceAddress(new QoSLevelList(), new NamedValueList(), 1, serviceURI, brokerURI, null);
+    ServiceAddressList sal = new ServiceAddressList();
+    sal.add(sa);
+    
+    ProviderInformation pi = new ProviderInformation(providerName, supportedCapabilities, new NamedValueList(), sal);
+    ProviderInformationList pil = new ProviderInformationList();
+    pil.add(pi);
+    
+    ServiceDetails sd = new ServiceDetails(service.getArea().getNumber(), service.getNumber(), service.getArea().getVersion(), pil);
+    ServiceDetailsList sdl = new ServiceDetailsList();
+    sdl.add(sd);
+    
+    LocalNode node = new LocalNode(SessionType.LIVE, new Identifier("LIVE"), sdl);
+    NodeDetails nd = new NodeDetails(domain, network, node);
+    
+    NodeDetailsList ndl = new NodeDetailsList();
+    ndl.add(nd);
+    
+    return ndl;
   }
 }

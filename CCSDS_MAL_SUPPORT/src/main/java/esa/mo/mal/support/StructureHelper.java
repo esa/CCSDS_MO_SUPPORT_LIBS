@@ -31,6 +31,14 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.ccsds.moims.mo.mal.MALContextFactory;
+import org.ccsds.moims.mo.mal.structures.Attribute;
+import org.ccsds.moims.mo.mal.structures.Element;
+import org.ccsds.moims.mo.mal.structures.ElementList;
+import org.ccsds.moims.mo.mal.structures.FineTime;
+import org.ccsds.moims.mo.mal.structures.Identifier;
+import org.ccsds.moims.mo.mal.structures.IdentifierList;
+import org.ccsds.moims.mo.mal.structures.Time;
 import org.ccsds.moims.mo.mal.structures.URI;
 
 /**
@@ -40,7 +48,13 @@ import org.ccsds.moims.mo.mal.structures.URI;
  */
 public abstract class StructureHelper
 {
+  private static final Logger LOGGER = Logger.getLogger("esa.mo.mal");
   private static final Set LOADED_PROPERTIES = new TreeSet();
+
+  private StructureHelper()
+  {
+    // Private default constructor 
+  }
 
   /**
    * Clears the list of loaded property files.
@@ -71,7 +85,7 @@ public abstract class StructureHelper
       }
       catch (MalformedURLException ex)
       {
-        Logger.getLogger("esa.mo.mal").log(Level.WARNING,
+        LOGGER.log(Level.WARNING,
                 "Failed to load properties file {0} {1}", new Object[]
                 {
                   file, ex
@@ -123,14 +137,14 @@ public abstract class StructureHelper
 
         final Properties subProps = loadProperties(myProps.getProperty(chainProperty), chainProperty);
 
-        Logger.getLogger("esa.mo.mal").log(Level.INFO,
+        LOGGER.log(Level.INFO,
                 "Loading properties from {0}", url.toString());
         topProps.putAll(subProps);
         topProps.putAll(myProps);
       }
       catch (IOException ex)
       {
-        Logger.getLogger("esa.mo.mal").log(Level.WARNING,
+        LOGGER.log(Level.WARNING,
                 "Failed to load properties file {0} {1}", new Object[]
                 {
                   url, ex
@@ -141,7 +155,14 @@ public abstract class StructureHelper
     return topProps;
   }
 
-  public static void storeURIs(String filename, URI mainUri, URI brokerUri)
+  /**
+   * Stores the supplied URIs in a specified file using the Java property format.
+   *
+   * @param filename The filename to use.
+   * @param serviceUri The service URI.
+   * @param brokerUri The broker URI.
+   */
+  public static void storeURIs(String filename, URI serviceUri, URI brokerUri)
   {
     if ((null != filename) && (0 < filename.length()))
     {
@@ -152,9 +173,9 @@ public abstract class StructureHelper
         final OutputStreamWriter osw = new OutputStreamWriter(fos);
         final BufferedWriter wrt = new BufferedWriter(osw);
 
-        if ((null != mainUri) && (null != mainUri.getValue()))
+        if ((null != serviceUri) && (null != serviceUri.getValue()))
         {
-          wrt.append("uri=" + mainUri);
+          wrt.append("uri=" + serviceUri);
           wrt.newLine();
         }
         if ((null != brokerUri) && (null != brokerUri.getValue()))
@@ -166,8 +187,163 @@ public abstract class StructureHelper
       }
       catch (IOException ex)
       {
-        Logger.getLogger("esa.mo.mal").log(Level.WARNING, "Unable to write URI information to properties file {0}", ex);
+        LOGGER.log(Level.WARNING, "Unable to write URI information to properties file {0}", ex);
       }
     }
+  }
+
+  /**
+   * Returns true is the supplied attribute is not null and is one of the MAL types that are represented using a Java
+   * string.
+   *
+   * @param in The attribute to test.
+   * @return true if based on a String type.
+   */
+  public static boolean isStringAttribute(Attribute in)
+  {
+    if (null != in)
+    {
+      int shortFormPart = in.getTypeShortForm();
+
+      if ((shortFormPart == Attribute._IDENTIFIER_TYPE_SHORT_FORM)
+              || (shortFormPart == Attribute._STRING_TYPE_SHORT_FORM)
+              || (shortFormPart == Attribute._URI_TYPE_SHORT_FORM))
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Returns the list type of the supplied MAL element type.
+   *
+   * @param objIn The MAL element type to return the list type of.
+   * @return The list type or null if not found or null passed in.
+   */
+  public static ElementList elementToElementList(Element objIn)
+  {
+    if (objIn == null)
+    {
+      return null;
+    }
+
+    long l = objIn.getShortForm();
+    long ll = (-((l) & 0xFFFFFFL)) & 0xFFFFFFL + (l & 0xFFFFFFFFFF000000L);
+
+    return (ElementList) MALContextFactory.getElementFactoryRegistry().lookupElementFactory(ll).createElement();
+  }
+
+  /**
+   * Returns the MAL element type of the supplied list type.
+   *
+   * @param objIn The list type to return the MAL element type of.
+   * @return The MAL element type or null if not found or null passed in.
+   */
+  public static Element elementListToElement(ElementList objIn)
+  {
+    if (objIn == null)
+    {
+      return null;
+    }
+
+    long l = objIn.getShortForm();
+    long ll = (-((l) & 0xFFFFFFL)) & 0xFFFFFFL + (l & 0xFFFFFFFFFF000000L);
+
+    return (Element) MALContextFactory.getElementFactoryRegistry().lookupElementFactory(ll).createElement();
+  }
+
+  /**
+   * Converts a dot notation domain string to the segmented Identifier list version.
+   *
+   * @param domainId The string domain.
+   * @return the list version.
+   */
+  public static IdentifierList domainIdToDomain(String domainId)
+  {
+    if (domainId == null)
+    {
+      return new IdentifierList();
+    }
+
+    IdentifierList output = new IdentifierList();
+
+    String[] parts = domainId.split("\\.");
+
+    for (String part : parts)
+    {
+      if (null != part)
+      {
+        part = part.trim();
+        if (!part.isEmpty())
+        {
+          output.add(new Identifier(part));
+        }
+      }
+    }
+
+    return output;
+  }
+
+  /**
+   * Converts a segmented Identifier list domain to the dot notation string version.
+   *
+   * @param domain The list version of domain.
+   * @return the string dot notation version.
+   */
+  public static String domainToDomainId(IdentifierList domain)
+  {
+    if (domain == null)
+    {
+      return null;
+    }
+
+    if (domain.isEmpty())
+    {
+      return "";
+    }
+
+    boolean firstRun = true;
+    StringBuilder domainId = new StringBuilder();
+    for (Identifier part : domain)
+    {
+      if ((null != part) && (null != part.getValue()))
+      {
+        String str = part.getValue().trim();
+        if (!str.isEmpty())
+        {
+          if (!firstRun)
+          {
+            domainId.append(".");
+          }
+
+          domainId.append(str);
+          firstRun = false;
+        }
+      }
+    }
+
+    return domainId.toString();
+  }
+
+  /**
+   * Create a fine time timestamp using the current system time.
+   *
+   * @return the current time in fine time format.
+   */
+  public static FineTime getTimestamp()
+  {
+    return new FineTime(System.currentTimeMillis());
+  }
+
+  /**
+   * Create a time timestamp using the current system time.
+   *
+   * @return the current time in time format.
+   */
+  public static Time getTimestampMillis()
+  {
+    return new Time(System.currentTimeMillis());
   }
 }

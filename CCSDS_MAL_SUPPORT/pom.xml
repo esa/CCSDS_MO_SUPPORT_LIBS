@@ -24,7 +24,7 @@
   </parent>
   
   <artifactId>SUPPORT_LIB_MAL</artifactId>
-  <version>1.0.1</version>
+  <version>1.0.2-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>ESA MAL Java support library</name>
