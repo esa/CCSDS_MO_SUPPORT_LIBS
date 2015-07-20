@@ -39,8 +39,8 @@ import org.ccsds.moims.mo.mal.structures.IdentifierList;
  */
 public abstract class BaseComServer extends BaseMalServer
 {
-  protected EventServiceHandler eventService;
-  protected ActivityTracking activityService;
+  protected EventServiceProvider eventService;
+  protected ActivityTrackingPublisher activityService;
 
   /**
    * Constructor.
@@ -77,8 +77,8 @@ public abstract class BaseComServer extends BaseMalServer
   @Override
   protected void subInit() throws MALException, MALInteractionException
   {
-    eventService = new EventServiceHandler(createEventHandlerPublishListener());
-    activityService = new ActivityTracking(eventService);
+    eventService = new EventServiceProvider(createEventHandlerPublishListener());
+    activityService = new ActivityTrackingPublisher(eventService);
 
     createProvider(EventHelper.EVENT_SERVICE, eventService, true);
 
@@ -87,6 +87,6 @@ public abstract class BaseComServer extends BaseMalServer
 
   protected MALPublishInteractionListener createEventHandlerPublishListener()
   {
-    return new EventServiceHandler.EventPublisher();
+    return new EventServiceProvider.EventPublisher();
   }
 }

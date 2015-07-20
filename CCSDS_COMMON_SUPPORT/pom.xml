@@ -87,6 +87,12 @@
       <groupId>int.esa.ccsds.mo</groupId>
       <artifactId>SUPPORT_LIB_COM</artifactId>
       <version>1.1-SNAPSHOT</version>
+      <exclusions>
+        <exclusion>
+          <groupId>int.esa.ccsds.mo</groupId>
+          <artifactId>SUPPORT_LIB_MAL</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 

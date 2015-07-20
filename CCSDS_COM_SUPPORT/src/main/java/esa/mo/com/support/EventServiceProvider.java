@@ -49,7 +49,7 @@ import org.ccsds.moims.mo.mal.transport.MALMessageHeader;
  * Small class that wraps up access to the COM Event service such that clients of it can just call the publish operation
  * and have the event published.
  */
-public class EventServiceHandler extends EventInheritanceSkeleton
+public class EventServiceProvider extends EventInheritanceSkeleton
 {
   private final MALPublishInteractionListener eventPublishListener;
   private MonitorEventPublisher monitorEventPublisher = null;
@@ -59,7 +59,7 @@ public class EventServiceHandler extends EventInheritanceSkeleton
    *
    * @param eventPublishListener The publish event listener.
    */
-  public EventServiceHandler(MALPublishInteractionListener eventPublishListener)
+  public EventServiceProvider(MALPublishInteractionListener eventPublishListener)
   {
     this.eventPublishListener = eventPublishListener;
   }
@@ -103,7 +103,7 @@ public class EventServiceHandler extends EventInheritanceSkeleton
    * @throws MALInteractionException On error.
    * @throws MALException On error.
    */
-  public void publish(final UpdateHeaderList updateHeaderList,
+  public void publishEvents(final UpdateHeaderList updateHeaderList,
           final ObjectDetailsList eventLinks,
           final ElementList eventBody)
           throws MALInteractionException, MALException
@@ -120,7 +120,7 @@ public class EventServiceHandler extends EventInheritanceSkeleton
    * @throws MALInteractionException On error.
    * @throws MALException On error.
    */
-  public void publishSingle(final UpdateHeader updateHeader,
+  public void publishSingleEvent(final UpdateHeader updateHeader,
           final ObjectDetails eventLink,
           final Element eventBody)
           throws MALInteractionException, MALException
