@@ -42,8 +42,8 @@ import org.ccsds.moims.mo.mal.structures.Time;
 import org.ccsds.moims.mo.mal.structures.URI;
 
 /**
- * Helper class that contains useful utility functions. It also stores a list of loaded property files so that the same
- * property file is not loaded multiple times.
+ * Helper class that contains useful utility functions. It also stores a list of loaded property files so that the same property
+ * file is not loaded multiple times.
  *
  */
 public abstract class StructureHelper
@@ -65,8 +65,8 @@ public abstract class StructureHelper
   }
 
   /**
-   * Loads in a property file and optionally searches for a contained property that contains the next file to load.
-   * loaded properties are then stored in the system properties.
+   * Loads in a property file and optionally searches for a contained property that contains the next file to load. loaded
+   * properties are then stored in the system properties.
    *
    * @param chainProperty The property name that contains the name of the file to load.
    * @param defaultFile The name of the property file to load if the chain property has not been set.
@@ -164,8 +164,26 @@ public abstract class StructureHelper
    */
   public static void storeURIs(String filename, URI serviceUri, URI brokerUri)
   {
+    storeURIs(filename, "", serviceUri, brokerUri);
+  }
+
+  /**
+   * Stores the supplied URIs in a specified file using the Java property format.
+   *
+   * @param filename The filename to use.
+   * @param propertyPrefix The prefix to use on each of properties created.
+   * @param serviceUri The service URI.
+   * @param brokerUri The broker URI.
+   */
+  public static void storeURIs(String filename, String propertyPrefix, URI serviceUri, URI brokerUri)
+  {
     if ((null != filename) && (0 < filename.length()))
     {
+      if (null == propertyPrefix)
+      {
+        propertyPrefix = "";
+      }
+      
       try
       {
         File file = new File(filename);
@@ -175,14 +193,18 @@ public abstract class StructureHelper
 
         if ((null != serviceUri) && (null != serviceUri.getValue()))
         {
+          wrt.append(propertyPrefix);
           wrt.append("uri=" + serviceUri);
           wrt.newLine();
         }
+        
         if ((null != brokerUri) && (null != brokerUri.getValue()))
         {
+          wrt.append(propertyPrefix);
           wrt.append("broker=" + brokerUri);
           wrt.newLine();
         }
+
         wrt.close();
       }
       catch (IOException ex)
@@ -193,8 +215,7 @@ public abstract class StructureHelper
   }
 
   /**
-   * Returns true is the supplied attribute is not null and is one of the MAL types that are represented using a Java
-   * string.
+   * Returns true is the supplied attribute is not null and is one of the MAL types that are represented using a Java string.
    *
    * @param in The attribute to test.
    * @return true if based on a String type.
