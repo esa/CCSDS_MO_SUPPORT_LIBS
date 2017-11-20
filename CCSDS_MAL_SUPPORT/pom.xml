@@ -19,12 +19,12 @@
   <parent>
     <groupId>int.esa.ccsds.mo</groupId>
     <artifactId>POM</artifactId>
-    <version>6</version>
+    <version>7</version>
     <relativePath/>
   </parent>
   
   <artifactId>SUPPORT_LIB_MAL</artifactId>
-  <version>1.0.4</version>
+  <version>1.7</version>
   <packaging>jar</packaging>
 
   <name>ESA MAL Java support library</name>
